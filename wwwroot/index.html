@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dobic Chatbot</title>
+  <style>
+    body {
+      background: #f4f7fa;
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .chat-container {
+      width: 100%;
+      max-width: 600px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      overflow-wrap: break-word;
+      word-wrap: break-word;
+    }
+    .message {
+      margin-bottom: 15px;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .bot {
+      color: #3d3d3d;
+      font-weight: bold;
+    }
+    .user {
+      color: #007bff;
+    }
+    .button-group button {
+      margin: 5px 5px 0 0;
+      padding: 10px 16px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.3s;
+    }
+    .button-group button:hover {
+      background: #0056b3;
+    }
+    a {
+      color: #007bff;
+      text-decoration: underline;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="message bot" id="intro-msg">👋 Hello! Which application are you having an issue with?</div>
+    <div class="message button-group" id="app-buttons"></div>
+    <div class="message button-group" id="issue-buttons"></div>
+    <div class="message bot" id="solution-text"></div>
+    <div class="message button-group" id="restart-buttons"></div>
+  </div>
+
+  <script>
+    const introMsg = document.getElementById("intro-msg");
+    const appDiv = document.getElementById("app-buttons");
+    const issueDiv = document.getElementById("issue-buttons");
+    const solutionDiv = document.getElementById("solution-text");
+    const restartDiv = document.getElementById("restart-buttons");
+
+    async function fetchApps() {
+      introMsg.innerHTML = "👩‍💻 Hello! Which application are you having an issue with?";
+      appDiv.innerHTML = '';
+      issueDiv.innerHTML = '';
+      solutionDiv.innerHTML = '';
+      restartDiv.innerHTML = '';
+
+      const res = await fetch("/api/apps");
+      const apps = await res.json();
+      appDiv.innerHTML = apps.map(app => 
+        `<button onclick="selectApp('${app.issueID}', '${app.label}')">${app.label}</button>`).join('');
+    }
+
+    async function selectApp(appId, appLabel) {
+      appDiv.insertAdjacentHTML("afterend", `<div class='message user'>I have an issue with: <strong>${appLabel}</strong></div>`);
+      appDiv.innerHTML = '';
+      issueDiv.innerHTML = '';
+      solutionDiv.innerHTML = '';
+      restartDiv.innerHTML = '';
+
+      const res = await fetch(`/api/issues?appId=${appId}`);
+      const issues = await res.json();
+      issueDiv.innerHTML = issues.map(issue => 
+        `<button onclick="selectIssue('${issue.issueID}', '${issue.label}')">${issue.label}</button>`).join('');
+    }
+
+    async function selectIssue(issueId, issueLabel) {
+      issueDiv.insertAdjacentHTML("afterend", `<div class='message user'>Issue: <strong>${issueLabel}</strong></div>`);
+      issueDiv.innerHTML = '';
+
+      const res = await fetch(`/api/solution?issueId=${issueId}`);
+      const data = await res.json();
+      const htmlSafe = data.solution.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+      solutionDiv.innerHTML = `<div class='message bot'>💡 Solution: ${htmlSafe}</div>`;
+
+      restartDiv.innerHTML = `
+        <div class='message bot'>❓ Do you have another question?</div>
+        <button onclick="fetchApps()">Yes</button>
+        <div class='message bot'>📝 Would you like to submit a Dobic ticket?</div>
+        <button onclick="window.open('https://nycmtaprod.service-now.com/sp?id=index', '_blank')">Submit a Ticket</button>
+      `;
+    }
+
+    fetchApps();
+  </script>
+</body>
+</html>
